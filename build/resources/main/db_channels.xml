@@ -49,14 +49,8 @@
     </int:header-value-router>
 
     <!--  convert the payload message from one CSV to JSON  -->
-    <int:transformer input-channel="MovieChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapMovie"/>
-    <int:transformer input-channel="ActorChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapActor"/>
-
-    <!--  route messages based on the value of a specific header  -->
-    <int:header-value-router input-channel="OutputTransformerChannel" header-name="file_name">
-        <int:mapping value="movies.csv" channel="JsonMoviesChannel"/>
-        <int:mapping value="actors.csv" channel="JsonActorsChannel"/>
-    </int:header-value-router>
+    <int:transformer input-channel="MovieChannel" output-channel="JsonMoviesChannel" ref="mapToObject" method="mapMovie"/>
+    <int:transformer input-channel="ActorChannel" output-channel="JsonActorsChannel" ref="mapToObject" method="mapActor"/>
 
     <int:channel id="JsonMoviesChannel"/>
     <int:channel id="JsonActorsChannel"/>

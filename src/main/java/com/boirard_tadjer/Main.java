@@ -6,12 +6,12 @@ import org.springframework.context.annotation.ImportResource;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 @SpringBootApplication
-//@ImportResource("classpath:db_channels.xml")
+@ImportResource("classpath:db_channels.xml")
 public class Main {
 
 	public static void main(String[] args) {
-		//SpringApplication.run(Main.class, args);
-		new ClassPathXmlApplicationContext("json_channels.xml");
+		SpringApplication.run(Main.class, args);
+		//new ClassPathXmlApplicationContext("json_channels.xml");
 	}
 
 }
