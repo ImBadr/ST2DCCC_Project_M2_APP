@@ -5,6 +5,8 @@
 
 This project is designed to transfer data from a source A (CSV file) to a source B (Database or JSON file).
 
+Follow this link to see the source code : [GitHub](https://github.com/ImBadr/ST2DCCC_Project_M2_APP)
+
 ## Execution
 requirements:
 - Java 17
@@ -103,3 +105,116 @@ SELECT * FROM ACTORS;
 ```
 
 ![Actors table](.github/images/h2_results.png)
+
+## XML Configuration files explanations
+
+### json_channels.xml
+
+```xml
+<!--  read data from dataIn  with a 2 seconds delay per read  -->
+<int-file:inbound-channel-adapter id="CsvInboundChannelAdapter"
+                                  directory="./dataIn"
+                                  filename-pattern="*.csv"
+                                  channel="CsvInputChannel">
+    <int:poller fixed-delay="2000"/>
+</int-file:inbound-channel-adapter>
+```
+```xml
+<!--  split a single message into multiple messages  -->
+<int-file:splitter id="splitter" apply-sequence="false" charset="UTF-8" first-line-as-header="true"
+                   input-channel="CsvInputChannel" output-channel="SplitCsvOutputChannel"
+                   auto-startup="true"/>
+```
+```xml
+<!--  route messages based on the value of the header  -->
+<int:header-value-router id="router" input-channel="SplitCsvOutputChannel" header-name="file_name" resolution-required="false">
+    <int:mapping value="movies.csv" channel="MovieChannel"/>
+    <int:mapping value="actors.csv" channel="ActorChannel"/>
+</int:header-value-router>
+```
+```xml
+<!--  convert the payload message from one CSV to Object by using mapMovie function from MapToObject class-->
+<int:transformer input-channel="MovieChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapMovie"/>
+```
+```xml
+<!--  convert the payload message from one CSV to Object by using mapActor function from MapToObject class-->
+<int:transformer input-channel="ActorChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapActor"/>
+```
+```xml
+<!--  convert the Java Objects created above to Json objects  -->
+<int:object-to-json-transformer input-channel="OutputTransformerChannel" output-channel="JsonOutputChannel"/>
+```
+```xml
+<!--  channel to transfer JSON Objects  -->
+<int:channel id="JsonOutputChannel"/>
+```
+```xml
+<!--  write data JSON Objects into dataOut folder using the NameGenerator class to create the JSON file with the right name  -->
+<int-file:outbound-channel-adapter id="CsvOutboundChannelAdapter" channel="JsonOutputChannel" filename-generator="nameGenerator"
+directory="./dataOut" append-new-line="true" mode="APPEND"/>
+```
+
+### db_channels.xml
+
+```xml
+<!-- expose an embedded database instance as a bean in a Spring ApplicationContext  -->
+<!-- This will create automatically the database named "cinema"  -->
+<!-- This will read the SQL script inside the "script.sql" file and run it  -->
+<jdbc:embedded-database id="cinema" type="H2">
+    <jdbc:script location="classpath:script.sql"/>
+</jdbc:embedded-database>
+```
+```xml
+<!--  read data from dataIn  -->
+<int-file:inbound-channel-adapter id="CsvInboundChannelAdapterToDB"
+                                  directory="./dataIn"
+                                  filename-pattern="*.csv"
+                                  channel="CsvInputChannel">
+    <int:poller id="poller" fixed-delay="2000"/>
+</int-file:inbound-channel-adapter>
+```
+```xml
+<!--  split a single message into multiple messages  -->
+<int-file:splitter id="splitterDB" apply-sequence="false" charset="UTF-8" first-line-as-header="true"
+                   input-channel="CsvInputChannel" output-channel="SplitCsvOutputChannelDB"
+                   auto-startup="true"/>
+```
+```xml
+<!--  route messages based on the value of the header  -->
+<int:header-value-router id="routerDB" input-channel="SplitCsvOutputChannelDB" header-name="file_name" resolution-required="false">
+    <int:mapping value="movies.csv" channel="MovieChannel"/>
+    <int:mapping value="actors.csv" channel="ActorChannel"/>
+</int:header-value-router>
+```
+```xml
+<!--  convert the payload message from one CSV to Object by using mapMovie function from MapToObject class-->
+<int:transformer input-channel="MovieChannel" output-channel="JsonMoviesChannel" ref="mapToObject" method="mapMovie"/>
+```
+```xml
+<!--  convert the payload message from one CSV to Object by using mapActor function from MapToObject class-->
+<int:transformer input-channel="ActorChannel" output-channel="JsonActorsChannel" ref="mapToObject" method="mapActor"/>
+```
+```xml
+<!--  Transfer JSON Objects through this channel  -->
+<int:channel id="JsonMoviesChannel"/>
+```
+```xml
+<!--  Transfer JSON Objects through this channel  -->
+<int:channel id="JsonActorsChannel"/>
+```
+```xml
+<!--  write data to h2 database  -->
+<int-jdbc:outbound-channel-adapter
+        query="INSERT INTO MOVIES (id, title, releaseDate, author)
+        values (:payload.id, :payload.title, :payload.releaseDate, :payload.author)"
+        data-source="cinema"
+        channel="JsonMoviesChannel"/>
+```
+```xml
+<!--  write data to h2 database  -->
+<int-jdbc:outbound-channel-adapter
+        query="INSERT INTO ACTORS (id, name, birthYear, idMovie)
+        values (:payload.id, :payload.name, :payload.birthYear, :payload.idMovie)"
+        data-source="cinema"
+        channel="JsonActorsChannel"/>
+```
