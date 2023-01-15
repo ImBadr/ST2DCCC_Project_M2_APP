@@ -5,7 +5,7 @@
 
 This project is designed to transfer data from a source A (CSV file) to a source B (Database or JSON file).
 
-Follow this link to see the source code : [GitHub](https://github.com/ImBadr/ST2DCCC_Project_M2_APP)
+Follow this link to see the source code : [https://github.com/ImBadr/ST2DCCC_Project_M2_APP](https://github.com/ImBadr/ST2DCCC_Project_M2_APP)
 
 ## Execution
 requirements:
