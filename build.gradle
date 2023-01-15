@@ -1,0 +1,33 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.0.1'
+	id 'io.spring.dependency-management' version '1.1.0'
+}
+
+group = 'com.boirard_tadjer'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-integration'
+	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.14.0'
+	implementation 'com.h2database:h2'
+	implementation 'org.springframework.integration:spring-integration-jdbc:6.0.1'
+	implementation 'org.springframework.integration:spring-integration-file:6.0.1'
+	implementation 'com.opencsv:opencsv:5.7.1'
+	implementation 'com.fasterxml.jackson.core:jackson-annotations:2.14.0'
+	implementation 'com.fasterxml.jackson.core:jackson-core:2.14.0'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
+	implementation 'org.projectlombok:lombok:1.18.24'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	annotationProcessor 'org.projectlombok:lombok:1.18.24'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

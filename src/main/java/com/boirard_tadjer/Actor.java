@@ -1,0 +1,18 @@
+package com.boirard_tadjer;
+
+import lombok.*;
+
+import java.util.List;
+
+@Getter
+@Setter
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Actor {
+    private Integer id;
+    private String name;
+    private Integer birthYear;
+    private Integer idMovie;
+}

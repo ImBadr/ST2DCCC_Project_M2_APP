@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:int-file="http://www.springframework.org/schema/integration/file"
+       xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xmlns:int-jdbc="http://www.springframework.org/schema/integration/jdbc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/integration
+           http://www.springframework.org/schema/integration/spring-integration-5.1.xsd
+           http://www.springframework.org/schema/integration/file
+           http://www.springframework.org/schema/integration/file/spring-integration-file-5.1.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/jdbc
+           http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+           http://www.springframework.org/schema/task
+           http://www.springframework.org/schema/task/spring-task.xsd
+           http://www.springframework.org/schema/integration/jdbc
+           https://www.springframework.org/schema/integration/jdbc/spring-integration-jdbc.xsd">
+
+    <context:component-scan base-package="com.boirard_tadjer"/>
+
+    <!-- expose an embedded database instance as a bean in a Spring ApplicationContext -->
+    <jdbc:embedded-database id="cinema" type="H2">
+        <jdbc:script location="classpath:script.sql"/>
+    </jdbc:embedded-database>
+
+    <!--  read data from dataIn  -->
+    <int-file:inbound-channel-adapter id="CsvInboundChannelAdapterToDB"
+                                      directory="./dataIn"
+                                      filename-pattern="*.csv"
+                                      channel="CsvInputChannel">
+        <int:poller id="poller" fixed-delay="2000"/>
+    </int-file:inbound-channel-adapter>
+
+    <!--  split a single message into multiple messages  -->
+    <int-file:splitter id="splitterDB" apply-sequence="false" charset="UTF-8" first-line-as-header="true"
+                       input-channel="CsvInputChannel" output-channel="SplitCsvOutputChannelDB"
+                       auto-startup="true"/>
+
+    <!--  route messages based on the value of a specific header  -->
+    <int:header-value-router id="routerDB" input-channel="SplitCsvOutputChannelDB" header-name="file_name" resolution-required="false">
+        <int:mapping value="movies.csv" channel="MovieChannel"/>
+        <int:mapping value="actors.csv" channel="ActorChannel"/>
+    </int:header-value-router>
+
+    <!--  convert the payload message from one CSV to JSON  -->
+    <int:transformer input-channel="MovieChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapMovie"/>
+    <int:transformer input-channel="ActorChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapActor"/>
+
+    <!--  route messages based on the value of a specific header  -->
+    <int:header-value-router input-channel="OutputTransformerChannel" header-name="file_name">
+        <int:mapping value="movies.csv" channel="JsonMoviesChannel"/>
+        <int:mapping value="actors.csv" channel="JsonActorsChannel"/>
+    </int:header-value-router>
+
+    <int:channel id="JsonMoviesChannel"/>
+    <int:channel id="JsonActorsChannel"/>
+
+    <!--  write data to h2 database  -->
+    <int-jdbc:outbound-channel-adapter
+            query="INSERT INTO MOVIES (id, title, releaseDate, author)
+            values (:payload.id, :payload.title, :payload.releaseDate, :payload.author)"
+            data-source="cinema"
+            channel="JsonMoviesChannel"/>
+
+    <!--  write data to h2 database  -->
+    <int-jdbc:outbound-channel-adapter
+            query="INSERT INTO ACTORS (id, name, birthYear, idMovie)
+            values (:payload.id, :payload.name, :payload.birthYear, :payload.idMovie)"
+            data-source="cinema"
+            channel="JsonActorsChannel"/>
+
+    <task:executor id="pollerExecutorDB"/>
+
+</beans>

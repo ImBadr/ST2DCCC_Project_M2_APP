@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:int="http://www.springframework.org/schema/integration"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:int-file="http://www.springframework.org/schema/integration/file"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/integration
+           http://www.springframework.org/schema/integration/spring-integration-5.1.xsd
+           http://www.springframework.org/schema/integration/file
+           http://www.springframework.org/schema/integration/file/spring-integration-file-5.1.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/task
+           http://www.springframework.org/schema/task/spring-task.xsd">
+
+    <context:component-scan base-package="com.boirard_tadjer"/>
+
+    <!--  read data from dataIn  -->
+    <int-file:inbound-channel-adapter id="CsvInboundChannelAdapter"
+                                      directory="./dataIn"
+                                      filename-pattern="*.csv"
+                                      channel="CsvInputChannel">
+        <int:poller fixed-delay="2000"/>
+    </int-file:inbound-channel-adapter>
+
+    <!--  split a single message into multiple messages  -->
+    <int-file:splitter id="splitter" apply-sequence="false" charset="UTF-8" first-line-as-header="true"
+                       input-channel="CsvInputChannel" output-channel="SplitCsvOutputChannel"
+                       auto-startup="true"/>
+
+    <!--  route messages based on the value of a specific header  -->
+    <int:header-value-router id="router" input-channel="SplitCsvOutputChannel" header-name="file_name" resolution-required="false">
+        <int:mapping value="movies.csv" channel="MovieChannel"/>
+        <int:mapping value="actors.csv" channel="ActorChannel"/>
+    </int:header-value-router>
+
+    <!--  convert the payload message from one CSV to JSON  -->
+    <int:transformer input-channel="MovieChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapMovie"/>
+    <int:transformer input-channel="ActorChannel" output-channel="OutputTransformerChannel" ref="mapToObject" method="mapActor"/>
+
+    <int:object-to-json-transformer input-channel="OutputTransformerChannel" output-channel="JsonOutputChannel"/>
+
+    <int:channel id="JsonOutputChannel"/>
+
+    <!--  write data to dataOut  -->
+    <int-file:outbound-channel-adapter id="CsvOutboundChannelAdapter" channel="JsonOutputChannel" filename-generator="nameGenerator"
+                                       directory="./dataOut" append-new-line="true" mode="APPEND"/>
+
+    <task:executor id="pollerExecutor"/>
+</beans>
